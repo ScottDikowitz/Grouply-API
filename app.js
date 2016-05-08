@@ -18,31 +18,13 @@ FacebookStrategy = require('passport-facebook').Strategy;
 
 
 var path = require('path');
-// var webpack = require('webpack');
-// var webpackMiddleware = require('webpack-dev-middleware');
-// var webpackHotMiddleware = require('webpack-hot-middleware');
-// var config = require('./webpack.config.js');
-//
-// const compiler = webpack(config);
 var passport = require('passport');
 var expressSession = require('express-session');
-// var login = require('./passport/login.js');
-//
-// login(auth, passport);
 
 app.use(express.static('public'));
 app.use(expressSession({secret: 'mySecretKey'}));
 app.use(passport.initialize());
 app.use(passport.session());
-
-// app.use(session({ secret: 'keyboard cat', cookie: { maxAge: 60000 }}));
-
-// app.use(express.static(__dirname + '/dist'));
-// app.use(webpackMiddleware(compiler));
-// app.use(webpackHotMiddleware(compiler));
-// app.get('/', function response(req, res) {
-//   res.sendFile(path.join(__dirname, 'dist/index.html'));
-// });
 io.sockets.on('connection', function(socket){
     socket.emit('news', {hello: 'world'});
     socket.on('send-comment', function(data){
@@ -57,7 +39,7 @@ app.get('/auth/facebook',
 ));
 //
 app.get('/auth/facebook/callback',
-  passport.authenticate('facebook', {failureRedirect : '/', successRedirect: '/'})
+  passport.authenticate('facebook', {failureRedirect : 'http://localhost:3000', successRedirect: 'http://localhost:3000'})
 );
 
 passport.use('facebook', new FacebookStrategy(auth.facebookAuth,

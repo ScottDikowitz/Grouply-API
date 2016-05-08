@@ -4,9 +4,8 @@
   "description": "groupme is an app for allowing users to join up into groups.",
   "main": "index.js",
   "scripts": {
-    "startAll": "mongod & node app.js",
     "test": "node debug app.js",
-    "start": "node app.js"
+    "start": "mongod & node app.js"
   },
   "author": "Scott Dikowitz",
   "license": "ISC",
