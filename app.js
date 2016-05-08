@@ -1,7 +1,4 @@
 var express = require('express');
-// var app     = express();
-// var server  = require('http').createServer(app);
-// var io      = require('socket.io').listen(server);
 var app = express();
 app.set('port', process.env.PORT || 8000);
 var server = require('http').createServer(app);
@@ -13,7 +10,7 @@ var dbConfig = require('./db.js');
 var mongoose = require('mongoose');
 var User = require('./models/User.js');
 mongoose.connect(dbConfig.url);
-// var passport = require('passport-facebook');
+
 FacebookStrategy = require('passport-facebook').Strategy;
 
 
