@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "mongod & node app.js",
-    "hot": "mongod & nodemon app.js"
+    "hot": "./intercept.sh"
   },
   "author": "Scott Dikowitz",
   "license": "ISC",
@@ -21,6 +21,7 @@
     "passport-facebook": "^2.1.0",
     "passport-http-oauth": "^0.1.3",
     "passport-local": "^1.0.0",
+    "passport.socketio": "^3.6.1",
     "socket.io": "^1.4.5"
   },
   "devDependencies": {

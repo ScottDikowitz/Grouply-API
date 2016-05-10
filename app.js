@@ -29,7 +29,7 @@ app.use(expressSession({secret: 'mySecretKey'}));
 app.use(passport.initialize());
 app.use(passport.session());
 io.sockets.on('connection', function(socket){
-    socket.emit('news', {hello: 'world'});
+    // socket.emit('news', {hello: 'world'});
     socket.on('send-comment', function(data){
         // console.log(data);
         count += 1;
