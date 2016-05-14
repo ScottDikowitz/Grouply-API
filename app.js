@@ -48,8 +48,13 @@ function onAuthorizeSuccess(data, accept){
 
 function onAuthorizeFail(data, message, error, accept){
 
-  if(error)
+  if(error){
     accept(new Error(message));
+}
+  else {
+     accept(null, false);
+
+  }
   // this error will be sent to the user as a special error-package
   // see: http://socket.io/docs/client-api/#socket > error-object
 }
@@ -60,8 +65,13 @@ app.use(passport.session());
 
 io.sockets.on('connection', function(socket){
     // socket.emit('news', {hello: 'world'});
+
     socket.on('send-comment', function(data){
-        data.user = socket.request.user;
+        if (socket.request.user.logged_in){
+            data.user = socket.request.user;
+        } else {
+            data.user = {name: 'guest'};
+        }
         io.sockets.emit('receive-comment', data);
     });
 });
