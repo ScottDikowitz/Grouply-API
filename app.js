@@ -10,7 +10,6 @@ var dbConfig = require('./db.js');
 var mongoose = require('mongoose');
 var User = require('./models/User.js');
 var passportSocketIo = require('passport.socketio');
-// var cors = require('express-cors');
 var cookieParser = require('cookie-parser');
 
 mongoose.connect(dbConfig.url);
@@ -25,16 +24,10 @@ var RedisStore = require('connect-redis')(expressSession);
 var client = require('redis').createClient();
 var RedisStoreInstance = new RedisStore({ host: 'localhost', port: 6379, client: client,ttl :  260});
 
-
-// app.use(cors({
-// 	allowedOrigins: [
-// 		'localhost:3000'
-// 	]
-// }));
 app.use(express.static('public'));
-// app.use(expressSession({secret: 'mySecretKey'}));
 app.use(expressSession({
     cookieParser: cookieParser,
+    // cookie: { httpOnly: false },
     store: RedisStoreInstance,
     secret: 'mySecretKey',
     saveUninitialized: false,
@@ -42,10 +35,25 @@ app.use(expressSession({
 }));
 io.use(passportSocketIo.authorize({
   cookieParser: cookieParser,
-  secret:       'mySecretKey',    // the session_secret to parse the cookie
-  store:        RedisStoreInstance,        // we NEED to use a sessionstore. no memorystore please
-
+  secret:       'mySecretKey',
+  store:        RedisStoreInstance,
+  success:      onAuthorizeSuccess,
+  fail:         onAuthorizeFail,
 }));
+
+function onAuthorizeSuccess(data, accept){
+  console.log('successful connection to socket.io');
+  accept();
+}
+
+function onAuthorizeFail(data, message, error, accept){
+
+  if(error)
+    accept(new Error(message));
+  // this error will be sent to the user as a special error-package
+  // see: http://socket.io/docs/client-api/#socket > error-object
+}
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -53,15 +61,13 @@ app.use(passport.session());
 io.sockets.on('connection', function(socket){
     // socket.emit('news', {hello: 'world'});
     socket.on('send-comment', function(data){
-        // console.log(data);
+        data.user = socket.request.user;
         io.sockets.emit('receive-comment', data);
     });
 });
 
 app.use(function(req, res, next) {
 res.header('Access-Control-Allow-Credentials', true);
-console.log(req.headers.origin);
-console.log('alkasjdflkjasflkjlksf');
 res.header('Access-Control-Allow-Origin', req.headers.origin);
 
 // res.header('Access-Control-Allow-Origin', req.headers.origin);
@@ -90,11 +96,11 @@ passport.deserializeUser(function(user, done) {
     // console.log(data);
     query.findOne(function(err, user){
         if (err){
-            // console.log('error: ' + err);
+            console.log('error: ' + err);
             // cb(err);
         } else if (user) {
             // console.log('user found!');
-            console.log('user: ' + user);
+            // console.log('user: ' + user);
             done(null, {id: user.facebookId, name: user.name});
         } else {
         }
@@ -117,7 +123,6 @@ app.get('/auth/facebook/callback',
 );
 
 app.get('/test', isLoggedIn, function (req, res, next) {
-    // console.log(req.user);
   res.json({users: { user1: 'test',
                      user2: req.user
                  }});
@@ -125,13 +130,10 @@ app.get('/test', isLoggedIn, function (req, res, next) {
 
 function isLoggedIn(req, res, next) {
 
-    // if user is authenticated in the session, carry on
     if (req.isAuthenticated())
         return next();
 
     res.json({result: 'not logged in.'});
-    // if they aren't redirect them to the home page
-    // res.redirect('http://localhost:3000');
 }
 
 passport.use('facebook', new FacebookStrategy(auth.facebookAuth,
