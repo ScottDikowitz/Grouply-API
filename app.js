@@ -9,7 +9,10 @@ var auth = require('./config/auth.js');
 var dbConfig = require('./db.js');
 var mongoose = require('mongoose');
 var User = require('./models/User.js');
+var passportSocketIo = require('passport.socketio');
 // var cors = require('express-cors');
+var cookieParser = require('cookie-parser');
+
 mongoose.connect(dbConfig.url);
 
 FacebookStrategy = require('passport-facebook').Strategy;
@@ -18,6 +21,10 @@ FacebookStrategy = require('passport-facebook').Strategy;
 var path = require('path');
 var passport = require('passport');
 var expressSession = require('express-session');
+var RedisStore = require('connect-redis')(expressSession);
+var client = require('redis').createClient();
+var RedisStoreInstance = new RedisStore({ host: 'localhost', port: 6379, client: client,ttl :  260});
+
 
 // app.use(cors({
 // 	allowedOrigins: [
@@ -25,9 +32,24 @@ var expressSession = require('express-session');
 // 	]
 // }));
 app.use(express.static('public'));
-app.use(expressSession({secret: 'mySecretKey'}));
+// app.use(expressSession({secret: 'mySecretKey'}));
+app.use(expressSession({
+    cookieParser: cookieParser,
+    store: RedisStoreInstance,
+    secret: 'mySecretKey',
+    saveUninitialized: false,
+    resave: false
+}));
+io.use(passportSocketIo.authorize({
+  cookieParser: cookieParser,
+  secret:       'mySecretKey',    // the session_secret to parse the cookie
+  store:        RedisStoreInstance,        // we NEED to use a sessionstore. no memorystore please
+
+}));
 app.use(passport.initialize());
 app.use(passport.session());
+
+
 io.sockets.on('connection', function(socket){
     // socket.emit('news', {hello: 'world'});
     socket.on('send-comment', function(data){
@@ -59,7 +81,6 @@ if ('OPTIONS' == req.method) {
 // });
 
 passport.serializeUser(function(user, done) {
-    // console.log('hello, ' + user);
     done(null, user);
 });
 

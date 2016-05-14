@@ -11,6 +11,7 @@
   "author": "Scott Dikowitz",
   "license": "ISC",
   "dependencies": {
+    "connect-redis": "^3.0.2",
     "debug": "^2.2.0",
     "express": "^4.13.4",
     "express-cors": "0.0.3",
