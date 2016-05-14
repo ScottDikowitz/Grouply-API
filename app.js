@@ -101,21 +101,7 @@ passport.serializeUser(function(user, done) {
 });
 
 passport.deserializeUser(function(user, done) {
-
-    var query = User.where({facebookId: user.facebookId});
-    // console.log(data);
-    query.findOne(function(err, user){
-        if (err){
-            console.log('error: ' + err);
-            // cb(err);
-        } else if (user) {
-            // console.log('user found!');
-            // console.log('user: ' + user);
-            done(null, {id: user.facebookId, name: user.name});
-        } else {
-        }
-    });
-
+    done(null, {id: user.facebookId, name: user.name});
 });
 
 app.get('/auth/facebook',
