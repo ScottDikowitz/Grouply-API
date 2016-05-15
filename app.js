@@ -66,14 +66,33 @@ app.use(passport.session());
 io.sockets.on('connection', function(socket){
     // socket.emit('news', {hello: 'world'});
 
-    socket.on('send-comment', function(data){
+    socket.on('subscribe', function(data) { socket.join(data.room); socket.room = data.room;});
+    socket.on('unsubscribe', function(data) { socket.leave(data.room); });
+
+
+    // setInterval(function(){
+    //     io.sockets.in('roomTwo').emit('roomChanged', { chicken: 'tasty' });
+    // }, 2000);
+
+    socket.on('send-comment', function (data) {
         if (socket.request.user.logged_in){
             data.user = socket.request.user;
         } else {
             data.user = {name: 'guest'};
         }
-        io.sockets.emit('receive-comment', data);
+        io.sockets.in(socket.room).emit('receive-comment', data);
+
     });
+
+
+    // socket.on('send-comment', function(data){
+    //     if (socket.request.user.logged_in){
+    //         data.user = socket.request.user;
+    //     } else {
+    //         data.user = {name: 'guest'};
+    //     }
+    //     io.sockets.emit('receive-comment', data);
+    // });
 });
 
 app.use(function(req, res, next) {
