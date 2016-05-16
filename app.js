@@ -80,6 +80,14 @@ io.sockets.on('connection', function(socket){
         } else {
             data.user = {name: 'guest'};
         }
+        // console.log(socket.rooms);
+        var allRooms = [];
+        for(var room in socket.rooms){
+            if(room !== socket.id){
+                allRooms.push(room);
+            }
+        }
+        data.rooms = allRooms;
         io.sockets.in(socket.room).emit('receive-comment', data);
 
     });
