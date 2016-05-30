@@ -11,6 +11,14 @@ var mongoose = require('mongoose');
 var User = require('./models/User.js');
 var passportSocketIo = require('passport.socketio');
 var cookieParser = require('cookie-parser');
+var MongoClient = require('mongodb').MongoClient;
+// var Db = require('mongodb').Db;
+var database;
+var db = MongoClient.connect(dbConfig.url, function(err, db) {
+  if (err) throw err;
+  console.log("Connected to Database");
+  database = db;
+  });
 
 mongoose.connect(dbConfig.url);
 
@@ -92,12 +100,26 @@ io.sockets.on('connection', function(socket){
         socket.join(data.room);
         socket.room = data.room;
 
+        database.createCollection(data.room, { capped : true, size : 10000, max : 10 }, function(err, collection){
+           if (err) throw err;
+
+            console.log("Created " + data.room);
+        });
+
+
 
         var users = [];
         for (var client in io.sockets.adapter.rooms[data.room].sockets){
             users.push(io.sockets.connected[client].username);
         }
-        io.sockets.in(socket.room).emit('receive-users', users);
+        var collection = database.collection(socket.room);
+        collection.find((err, data)=>{
+            data.toArray().then((messages)=>{
+                io.sockets.in(socket.room).emit('receive-users', {users: users, messages: messages});
+
+            });
+        });
+        // io.sockets.in(socket.room).emit('receive-users', {users: users, comments: []});
         // if (socket.request.user.logged_in){
             // if (users[data.room]){
             //     users[data.room][socket.request.user.id] = socket.request.user;
@@ -106,6 +128,7 @@ io.sockets.on('connection', function(socket){
             //     users[data.room][socket.request.user.id] = socket.request.user;
             // }
         // }
+
     });
     socket.on('unsubscribe', function(data) {
         socket.leave(data.room);
@@ -125,16 +148,19 @@ io.sockets.on('connection', function(socket){
     // }, 2000);
 
     socket.on('send-comment', function (data) {
-        if (socket.request.user.logged_in){
-            data.user = socket.request.user;
-        } else {
-            data.user = {name: 'guest'};
-        }
-
-        var users = [];
-        for (var client in io.sockets.adapter.rooms[socket.room].sockets){
-            users.push(io.sockets.connected[client].username);
-        }
+        // if (socket.request.user.logged_in){
+        //     data.user = socket.request.user;
+        // } else {
+            data.user = {name: socket.username};
+        // }
+        console.log(socket.room);
+        var collection = database.collection(socket.room);
+        collection.insert({comment:data.comment, name: data.user.name, id: data.user.id});
+        console.log(data);
+        // var users = [];
+        // for (var client in io.sockets.adapter.rooms[socket.room].sockets){
+        //     users.push(io.sockets.connected[client].username);
+        // }
         // var roster = io.sockets.clients(socket.room);
         // console.log(roster);
         // console.log(socket.rooms);
@@ -148,7 +174,7 @@ io.sockets.on('connection', function(socket){
         // }
         // data.rooms = allRooms;
         // console.log(JSON.stringify(users));
-        data.users = users;
+        // data.users = users;
         io.sockets.in(socket.room).emit('receive-comment', data);
 
     });
