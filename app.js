@@ -115,10 +115,11 @@ io.sockets.on('connection', function(socket){
         var collection = database.collection(socket.room);
         collection.find((err, data)=>{
             data.toArray().then((messages)=>{
-                io.sockets.in(socket.room).emit('receive-users', {users: users, messages: messages});
+                socket.emit('receive-messages', messages);
 
             });
         });
+        io.sockets.in(socket.room).emit('receive-users', users);
         // io.sockets.in(socket.room).emit('receive-users', {users: users, comments: []});
         // if (socket.request.user.logged_in){
             // if (users[data.room]){
@@ -153,14 +154,8 @@ io.sockets.on('connection', function(socket){
         // } else {
             data.user = {name: socket.username};
         // }
-        console.log(socket.room);
         var collection = database.collection(socket.room);
         collection.insert({comment:data.comment, name: data.user.name, id: data.user.id});
-        console.log(data);
-        // var users = [];
-        // for (var client in io.sockets.adapter.rooms[socket.room].sockets){
-        //     users.push(io.sockets.connected[client].username);
-        // }
         // var roster = io.sockets.clients(socket.room);
         // console.log(roster);
         // console.log(socket.rooms);
