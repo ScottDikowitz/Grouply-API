@@ -155,7 +155,7 @@ io.sockets.on('connection', function(socket){
             data.user = {name: socket.username};
         // }
         var collection = database.collection(socket.room);
-        collection.insert({comment:data.comment, name: data.user.name, id: data.user.id});
+        collection.insert({comment:data.comment, name: data.user.name, id: data.user.id, timestamp: Date.now() });
         // var roster = io.sockets.clients(socket.room);
         // console.log(roster);
         // console.log(socket.rooms);
