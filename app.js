@@ -13,7 +13,7 @@ var passportSocketIo = require('passport.socketio');
 var cookieParser = require('cookie-parser');
 var MongoClient = require('mongodb').MongoClient;
 // var Db = require('mongodb').Db;
-var secrets = require('./secrets');
+// var secrets = require('./secrets');
 var database;
 var db = MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
@@ -30,8 +30,10 @@ var path = require('path');
 var passport = require('passport');
 var expressSession = require('express-session');
 var RedisStore = require('connect-redis')(expressSession);
-var client = require('redis').createClient(secrets.redisUrl);
-var RedisStoreInstance = new RedisStore({ url: secrets.redisUrl, password: secrets.redisPassword});
+var client = require('redis').createClient(process.env.REDIS_URL || '');
+var options = process.env.REDIS_URL ? { url: process.env.REDIS_URL} : { host: 'localhost', port: 6379, client: client,ttl :  260};
+var RedisStoreInstance = new RedisStore(options);
+
 app.use(express.static('public'));
 app.use(expressSession({
     cookieParser: cookieParser,

@@ -1,5 +1,3 @@
-var secrets = require('./secrets');
-
 module.exports = {
-    'url' : secrets.mongoServer
+    'url' : process.env.REDIS_URL || 'mongodb://localhost/groupy'
 };
