@@ -1,3 +1,3 @@
 module.exports = {
-    'url' : process.env.REDIS_URL || 'mongodb://localhost/groupy'
+    'url' : process.env.MONGODB_URI || 'mongodb://localhost/groupy'
 };
