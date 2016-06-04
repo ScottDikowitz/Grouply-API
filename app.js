@@ -214,7 +214,7 @@ app.get('/api/test', isLoggedIn, function(req, res){
 });
 //
 app.get('/auth/facebook/callback',
-  passport.authenticate('facebook', {failureRedirect : 'http://localhost:3000', successRedirect: 'http://localhost:3000'})
+  passport.authenticate('facebook', {failureRedirect : 'http://localhost:5000', successRedirect: 'http://localhost:5000'})
 );
 
 app.get('/test', isLoggedIn, function (req, res, next) {

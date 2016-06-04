@@ -1,3 +1,5 @@
+var secrets = require('./secrets');
+
 module.exports = {
-    'url' : 'mongodb://localhost/groupy'
+    'url' : secrets.mongoServer
 };
