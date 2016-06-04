@@ -216,7 +216,7 @@ app.get('/api/test', isLoggedIn, function(req, res){
 });
 //
 app.get('/auth/facebook/callback',
-  passport.authenticate('facebook', {failureRedirect : 'http://localhost:5000', successRedirect: 'http://localhost:5000'})
+  passport.authenticate('facebook', {failureRedirect : 'http://grouplyui.herokuapp.com/', successRedirect: 'http://grouplyui.herokuapp.com/'})
 );
 
 app.get('/test', isLoggedIn, function (req, res, next) {
