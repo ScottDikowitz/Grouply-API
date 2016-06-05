@@ -15,6 +15,7 @@ var MongoClient = require('mongodb').MongoClient;
 // var Db = require('mongodb').Db;
 // var secrets = require('./secrets');
 var database;
+var UI_SERVER = process.env.UI_SERVER;
 var db = MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
   console.log("Connected to Database");
@@ -22,7 +23,6 @@ var db = MongoClient.connect(dbConfig.url, function(err, db) {
   });
 
 var development = process.env.NODE_ENV !== 'production';
-var server = process.env.SERVER;
 mongoose.connect(dbConfig.url);
 
 FacebookStrategy = require('passport-facebook').Strategy;
@@ -212,13 +212,13 @@ app.get('/auth/facebook',
 );
 
 app.get('/api/user', isLoggedIn, function(req, res){
-    res.json({user: { 
+    res.json({user: {
                        user2: req.user
                    }});
 });
 //
 app.get('/auth/facebook/callback',
-  passport.authenticate('facebook', {failureRedirect : server, successRedirect: server})
+  passport.authenticate('facebook', {failureRedirect : UI_SERVER, successRedirect: UI_SERVER})
 );
 
 app.get('/test', isLoggedIn, function (req, res, next) {
