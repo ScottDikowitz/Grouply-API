@@ -5,5 +5,5 @@ exit
 }
 
 trap "onINT" SIGINT
-node app.js
+NODE_ENV=development SERVER=http://grouplyui.herokuapp.com node app.js
 echo Done

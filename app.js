@@ -1,6 +1,6 @@
 var express = require('express');
 var app = express();
-app.set('port', process.env.PORT || 5000);
+app.set('port', process.env.PORT || 8000);
 var server = require('http').createServer(app);
 var io = require('socket.io').listen(server);
 server.listen(app.get('port'));
@@ -21,6 +21,8 @@ var db = MongoClient.connect(dbConfig.url, function(err, db) {
   database = db;
   });
 
+var development = process.env.NODE_ENV !== 'production';
+var server = process.env.SERVER;
 mongoose.connect(dbConfig.url);
 
 FacebookStrategy = require('passport-facebook').Strategy;
@@ -31,7 +33,7 @@ var passport = require('passport');
 var expressSession = require('express-session');
 var RedisStore = require('connect-redis')(expressSession);
 var client = require('redis').createClient(process.env.REDIS_URL || '');
-var options = process.env.REDIS_URL ? { url: process.env.REDIS_URL} : { host: 'localhost', port: 6379, client: client,ttl :  260};
+var options = !development ? { url: process.env.REDIS_URL} : { host: 'localhost', port: 6379, client: client,ttl :  260};
 var RedisStoreInstance = new RedisStore(options);
 
 app.use(express.static('public'));
@@ -209,14 +211,14 @@ app.get('/auth/facebook',
   passport.authenticate('facebook', { scope : ['email'] })
 );
 
-app.get('/api/test', isLoggedIn, function(req, res){
-    res.json({user: { user1: 'test',
+app.get('/api/user', isLoggedIn, function(req, res){
+    res.json({user: { 
                        user2: req.user
                    }});
 });
 //
 app.get('/auth/facebook/callback',
-  passport.authenticate('facebook', {failureRedirect : 'http://grouplyui.herokuapp.com/', successRedirect: 'http://grouplyui.herokuapp.com/'})
+  passport.authenticate('facebook', {failureRedirect : server, successRedirect: server})
 );
 
 app.get('/test', isLoggedIn, function (req, res, next) {
