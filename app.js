@@ -82,22 +82,22 @@ io.sockets.on('connection', function(socket){
     if (socket.request.user.logged_in){
         socket.username = socket.request.user.name;
     } else {
-        socket.username = 'guest#' + Math.floor(Math.random() * 10000000000);
+        socket.username = 'guest#' + Math.floor(Math.random() * 100000000);
     }
 		// usernames[username] = username;
     // console.log(io.sockets.adapter.rooms);
     // console.log(socket.rooms);
-    for (var client in io.sockets.adapter.rooms){
+    // for (var client in io.sockets.adapter.rooms){
         // console.log(client);
 
-        if (io.sockets.connected[client]){
+        // if (io.sockets.connected[client]){
             // console.log(client);
             // console.log(io.sockets.connected[client].username);
-        } else {
+        // } else {
             // console.log(client);
             // console.log(io.sockets.adapter.rooms[client].sockets);
-        }
-    }
+        // }
+    // }
     // console.log(io.sockets.connected);
     socket.nickname = socket.request.user;
     socket.on('subscribe', function(data) {
@@ -114,7 +114,7 @@ io.sockets.on('connection', function(socket){
 
         var users = [];
         for (var client in io.sockets.adapter.rooms[data.room].sockets){
-            users.push(io.sockets.connected[client].username);
+            users.push({username: io.sockets.connected[client].username, client: client});
         }
         var collection = database.collection(socket.room);
         collection.find((err, data)=>{
@@ -141,10 +141,15 @@ io.sockets.on('connection', function(socket){
         var users = [];
         if (io.sockets.adapter.rooms[data.room]){
             for (var client in io.sockets.adapter.rooms[data.room].sockets){
-                users.push(io.sockets.connected[client].username);
+                users.push({username: io.sockets.connected[client].username, client: client});
             }
             io.sockets.in(socket.room).emit('receive-users', users);
         }
+    });
+
+    socket.on('pvt-msg', function(data) {
+        var socket = io.sockets.connected[data.socket];
+        socket.emit('whisper', {message: data.message});
     });
 
 
@@ -192,12 +197,6 @@ if ('OPTIONS' == req.method) {
      next();
  }
 });
-
-// app.all('/*', function(req, res, next) {
-//     // res.header('Access-Control-Allow-Origin', '*');
-//     res.header('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With');
-//     next();
-// });
 
 passport.serializeUser(function(user, done) {
     done(null, user);
