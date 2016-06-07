@@ -20,11 +20,11 @@ var db = MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
   console.log("Connected to Database");
   database = db;
-  database.createCollection('privateChats', { size : 10000000, max : 100000 }, function(err, collection){
-     if (err) throw err;
-
-      console.log("Created privateChats");
-  });
+  // database.createCollection('privateChats', { size : 10000000, max : 100000 }, function(err, collection){
+  //    if (err) throw err;
+  //
+  //     console.log("Created privateChats");
+  // });
   });
 
 var development = process.env.NODE_ENV !== 'production';
@@ -248,7 +248,7 @@ passport.use('facebook', new FacebookStrategy(auth.facebookAuth,
           {
               facebookId: profile.id,
               name: userName,
-              email: profile.emails[0].value,
+              email: profile.emails ? profile.emails[0].value : '',
               token: accessToken
           }, function (err, user) {
               return cb(err, user);
