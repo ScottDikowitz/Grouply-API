@@ -20,6 +20,11 @@ var db = MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
   console.log("Connected to Database");
   database = db;
+  database.createCollection('privateChats', { size : 10000000, max : 100000 }, function(err, collection){
+     if (err) throw err;
+
+      console.log("Created privateChats");
+  });
   });
 
 var development = process.env.NODE_ENV !== 'production';
@@ -149,6 +154,7 @@ io.sockets.on('connection', function(socket){
 
     socket.on('pvt-msg', function(data) {
         var socket = io.sockets.connected[data.socket];
+        // database.privateChat.find({$or:[{"user1":data.userId},{"user1": socket.userId}] $and.....})
         socket.emit('whisper', {message: data.message});
     });
 
