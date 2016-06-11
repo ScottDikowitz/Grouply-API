@@ -20,11 +20,11 @@ var db = MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
   console.log("Connected to Database");
   database = db;
-  // database.createCollection('privateChats', { size : 10000000, max : 100000 }, function(err, collection){
-  //    if (err) throw err;
-  //
-  //     console.log("Created privateChats");
-  // });
+  database.createCollection('privateChats', { size : 10000000, max : 100000 }, function(err, collection){
+     if (err) throw err;
+
+      console.log("Created privateChats");
+  });
   });
 
 var development = process.env.NODE_ENV !== 'production';
@@ -86,8 +86,10 @@ io.sockets.on('connection', function(socket){
     // socket.emit('news', {hello: 'world'});
     if (socket.request.user.logged_in){
         socket.username = socket.request.user.name;
+        socket.loggedIn = true;
     } else {
         socket.username = 'guest#' + Math.floor(Math.random() * 100000000);
+        socket.loggedIn = false;
     }
 		// usernames[username] = username;
     // console.log(io.sockets.adapter.rooms);
@@ -119,7 +121,8 @@ io.sockets.on('connection', function(socket){
 
         var users = [];
         for (var client in io.sockets.adapter.rooms[data.room].sockets){
-            users.push({username: io.sockets.connected[client].username, client: client});
+            var theUser = io.sockets.connected[client];
+            users.push({username: theUser.username, client: client, loggedIn: theUser.loggedIn});
         }
         var collection = database.collection(socket.room);
         collection.find((err, data)=>{
@@ -152,10 +155,24 @@ io.sockets.on('connection', function(socket){
         }
     });
 
-    socket.on('pvt-msg', function(data) {
-        var socket = io.sockets.connected[data.socket];
-        // database.privateChat.find({$or:[{"user1":data.userId},{"user1": socket.userId}] $and.....})
-        socket.emit('whisper', {message: data.message});
+    socket.on('open-pvt-chat', function(data) {
+        var receiveSocket = io.sockets.connected[data.socket];
+        database.collection('privateChats').find(
+                     { $and: [ {users: { $in: [receiveSocket.request.user.id] }}, {users: {$in: [socket.request.user.id]}} ] },
+                     (err, data)=>{
+                         data.toArray()
+                         .then((res)=>{
+                             if (res.length > 0){
+                                 console.log(res[0]);
+                             } else {
+                                 console.log('no records found; creating chat');
+                                 database.collection('privateChats').insert({users: [receiveSocket.request.user.id, socket.request.user.id]});
+                             }
+                         });
+                     });
+        // receiveSocket.emit('whisper', {message: data.message});
+        receiveSocket.emit('open-window', {messages: []});
+
     });
 
 
