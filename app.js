@@ -185,11 +185,11 @@ io.sockets.on('connection', function(socket){
                  data.toArray()
                  .then((res)=>{
                      if (res.length > 0){
-                         receiveSocket.emit('open-window', {messages: res[0].messages});
+                         socket.emit('open-window', {messages: res[0].messages});
                      } else {
                          console.log('no records found; creating chat');
                          database.collection('privateChats').insert({users: [receiveSocket.request.user.id, socket.request.user.id], messages: []});
-                         receiveSocket.emit('open-window', {messages: []});
+                         socket.emit('open-window', {messages: []});
                      }
                  });
              });
