@@ -154,25 +154,45 @@ io.sockets.on('connection', function(socket){
             io.sockets.in(socket.room).emit('receive-users', users);
         }
     });
+    socket.on('send-pvt-message', function(data) {
+        var receiveSocket = io.sockets.connected[data.targetedSocket];
+        database.collection('privateChats').find(
+             { $and: [ {users: { $in: [receiveSocket.request.user.id] }}, {users: {$in: [socket.request.user.id]}} ] },
+             (err, document)=>{
+                //  console.log(document._id);
+                 document.toArray()
+                 .then((res)=>{
+                     if (res.length > 0){
+                         database.collection('privateChats').update(
+                           { _id: res[0]._id },
+                           { $push: { messages: {comment: data.message, user: {name: socket.username}} } }
+                         );
+                         socket.emit('receive-comment', {comment: data.message, user: {name: socket.username}});
+                         receiveSocket.emit('receive-comment', {comment: data.message, user: {name: socket.username}});
+                     } else {
+                         console.log('no records found; unknown error occured');
+                     }
+                 });
+             });
+    });
+
 
     socket.on('open-pvt-chat', function(data) {
         var receiveSocket = io.sockets.connected[data.socket];
         database.collection('privateChats').find(
-                     { $and: [ {users: { $in: [receiveSocket.request.user.id] }}, {users: {$in: [socket.request.user.id]}} ] },
-                     (err, data)=>{
-                         data.toArray()
-                         .then((res)=>{
-                             if (res.length > 0){
-                                 console.log(res[0]);
-                             } else {
-                                 console.log('no records found; creating chat');
-                                 database.collection('privateChats').insert({users: [receiveSocket.request.user.id, socket.request.user.id]});
-                             }
-                         });
-                     });
-        // receiveSocket.emit('whisper', {message: data.message});
-        receiveSocket.emit('open-window', {messages: []});
-
+             { $and: [ {users: { $in: [receiveSocket.request.user.id] }}, {users: {$in: [socket.request.user.id]}} ] },
+             (err, data)=>{
+                 data.toArray()
+                 .then((res)=>{
+                     if (res.length > 0){
+                         receiveSocket.emit('open-window', {messages: res[0].messages});
+                     } else {
+                         console.log('no records found; creating chat');
+                         database.collection('privateChats').insert({users: [receiveSocket.request.user.id, socket.request.user.id], messages: []});
+                         receiveSocket.emit('open-window', {messages: []});
+                     }
+                 });
+             });
     });
 
 
