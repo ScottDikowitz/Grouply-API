@@ -7,7 +7,8 @@ var UserSchema = {
     email: String,
     facebookId: String,
     token: String,
-    bio: String
+    bio: String,
+    socket: String
 };
 
 var userSchema = new Schema(UserSchema);

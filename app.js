@@ -20,10 +20,11 @@ var db = MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
   console.log("Connected to Database");
   database = db;
+  database.collection('users').update({},{$set : {"socket":'0'}},false,true);
   database.createCollection('privateChats', { size : 10000000, max : 100000 }, function(err, collection){
      if (err) throw err;
 
-      console.log("Created privateChats");
+    //   console.log("Created privateChats");
   });
   });
 
@@ -59,7 +60,7 @@ io.use(passportSocketIo.authorize({
 }));
 
 function onAuthorizeSuccess(data, accept){
-  console.log('successful connection to socket.io');
+  // console.log('successful connection to socket.io');
   accept();
 }
 
@@ -79,6 +80,8 @@ function onAuthorizeFail(data, message, error, accept){
 app.use(passport.initialize());
 app.use(passport.session());
 
+
+
 var allRooms = {};
 // var users = {};
 var numGuests = 0;
@@ -87,10 +90,59 @@ io.sockets.on('connection', function(socket){
     if (socket.request.user.logged_in){
         socket.username = socket.request.user.name;
         socket.loggedIn = true;
+        socket.facebookId = socket.request.user.id;
+        database.collection('users').findOne({facebookId: socket.request.user.id}, (err, document)=>{
+            database.collection('users').update(
+              { facebookId: socket.request.user.id },
+              { $set: {socket: socket.id} }
+            );
+        });
     } else {
         socket.username = 'guest#' + Math.floor(Math.random() * 100000000);
         socket.loggedIn = false;
+        socket.facebookId = '';
     }
+
+    function extractChatPartners(res, cb){
+        var otherId;
+        var users = [];
+        var userIds = [];
+        for (var i = 0; i < res.length; i++){
+            if (res[i].users[0] === socket.request.user.id){
+                userIds.push(res[i].users[1]);
+            } else {
+                userIds.push(res[i].users[0]);
+            }
+        }
+        database.collection('users').find(
+            { facebookId: { $in: userIds} },
+            { socket: 1, name: 1, facebookId: 1 },
+          (err, document)=>{
+              document.toArray().then((res)=>{
+                  cb(res);
+              });
+          });
+    }
+
+    // socket.emit('found-pvt-chats', pvtChats);
+    database.collection('privateChats').find(
+         {users: {$in: [socket.request.user.id]}},
+         (err, document)=>{
+            //  console.log(document._id);
+             document.toArray()
+             .then((res)=>{
+                //  console.log(res);
+                 if (res.length > 0){
+                    //  console.log('blaskjdlkfjalskjflkas');
+                     extractChatPartners(res, (users)=>{
+                         socket.emit('receive-chat-partners', users);
+                     });
+                 } else {
+                     console.log('no records found; unknown error occured');
+                 }
+             });
+         });
+
 		// usernames[username] = username;
     // console.log(io.sockets.adapter.rooms);
     // console.log(socket.rooms);
@@ -122,7 +174,7 @@ io.sockets.on('connection', function(socket){
         var users = [];
         for (var client in io.sockets.adapter.rooms[data.room].sockets){
             var theUser = io.sockets.connected[client];
-            users.push({username: theUser.username, client: client, loggedIn: theUser.loggedIn});
+            users.push({username: theUser.username, client: client, loggedIn: theUser.loggedIn, id: theUser.facebookId});
         }
         var collection = database.collection(socket.room);
         collection.find((err, data)=>{
@@ -157,7 +209,7 @@ io.sockets.on('connection', function(socket){
     socket.on('send-pvt-message', function(data) {
         var receiveSocket = io.sockets.connected[data.targetedSocket];
         database.collection('privateChats').find(
-             { $and: [ {users: { $in: [receiveSocket.request.user.id] }}, {users: {$in: [socket.request.user.id]}} ] },
+             { $and: [ {users: { $in: [data.userId] }}, {users: {$in: [socket.request.user.id]}} ] },
              (err, document)=>{
                 //  console.log(document._id);
                  document.toArray()
@@ -176,11 +228,27 @@ io.sockets.on('connection', function(socket){
              });
     });
 
+    socket.on('open-pvt-chat-window', function(data) {
+        var receiveSocket = io.sockets.connected[data.socket];
+        database.collection('privateChats').find(
+             { $and: [ {users: { $in: [data.facebookId] }}, {users: {$in: [socket.request.user.id]}} ] },
+             (err, data)=>{
+                 data.toArray()
+                 .then((res)=>{
+                     if (res.length > 0){
+                         socket.emit('open-window', {messages: res[0].messages});
+                     } else {
+                         console.log('no records found');
+                     }
+                 });
+             });
+    });
+
 
     socket.on('open-pvt-chat', function(data) {
         var receiveSocket = io.sockets.connected[data.socket];
         database.collection('privateChats').find(
-             { $and: [ {users: { $in: [receiveSocket.request.user.id] }}, {users: {$in: [socket.request.user.id]}} ] },
+             { $and: [ {users: { $in: [data.id] }}, {users: {$in: [socket.request.user.id]}} ] },
              (err, data)=>{
                  data.toArray()
                  .then((res)=>{
@@ -262,12 +330,6 @@ app.get('/api/user', isLoggedIn, function(req, res){
 app.get('/auth/facebook/callback',
   passport.authenticate('facebook', {failureRedirect : UI_SERVER, successRedirect: UI_SERVER})
 );
-
-app.get('/test', isLoggedIn, function (req, res, next) {
-  res.json({users: { user1: 'test',
-                     user2: req.user
-                 }});
-});
 
 function isLoggedIn(req, res, next) {
 
