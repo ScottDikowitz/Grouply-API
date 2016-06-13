@@ -87,22 +87,6 @@ var allRooms = {};
 var numGuests = 0;
 io.sockets.on('connection', function(socket){
     // socket.emit('news', {hello: 'world'});
-    if (socket.request.user.logged_in){
-        socket.username = socket.request.user.name;
-        socket.loggedIn = true;
-        socket.facebookId = socket.request.user.id;
-        database.collection('users').findOne({facebookId: socket.request.user.id}, (err, document)=>{
-            database.collection('users').update(
-              { facebookId: socket.request.user.id },
-              { $set: {socket: socket.id} }
-            );
-        });
-    } else {
-        socket.username = 'guest#' + Math.floor(Math.random() * 100000000);
-        socket.loggedIn = false;
-        socket.facebookId = '';
-    }
-
     function extractChatPartners(res, cb){
         var otherId;
         var users = [];
@@ -124,24 +108,45 @@ io.sockets.on('connection', function(socket){
           });
     }
 
-    // socket.emit('found-pvt-chats', pvtChats);
-    database.collection('privateChats').find(
-         {users: {$in: [socket.request.user.id]}},
-         (err, document)=>{
-            //  console.log(document._id);
-             document.toArray()
-             .then((res)=>{
-                //  console.log(res);
-                 if (res.length > 0){
-                    //  console.log('blaskjdlkfjalskjflkas');
-                     extractChatPartners(res, (users)=>{
-                         socket.emit('receive-chat-partners', users);
-                     });
-                 } else {
-                     console.log('no records found; unknown error occured');
-                 }
+    if (socket.request.user.logged_in){
+        socket.username = socket.request.user.name;
+        socket.loggedIn = true;
+        socket.facebookId = socket.request.user.id;
+        database.collection('users').findOne({facebookId: socket.request.user.id}, (err, document)=>{
+            database.collection('users').update(
+              { facebookId: socket.request.user.id },
+              { $set: {socket: socket.id} }
+            );
+        });
+
+        database.collection('privateChats').find(
+             {users: {$in: [socket.request.user.id]}},
+             (err, document)=>{
+                //  console.log(document._id);
+                 document.toArray()
+                 .then((res)=>{
+                    //  console.log(res);
+                     if (res.length > 0){
+                        //  console.log('blaskjdlkfjalskjflkas');
+                         extractChatPartners(res, (users)=>{
+                             socket.emit('receive-chat-partners', users);
+                         });
+                     } else {
+                         console.log('no records found; unknown error occured');
+                     }
+                 });
              });
-         });
+             
+    } else {
+        socket.username = 'guest#' + Math.floor(Math.random() * 100000000);
+        socket.loggedIn = false;
+        socket.facebookId = '';
+    }
+
+
+
+    // socket.emit('found-pvt-chats', pvtChats);
+
 
 		// usernames[username] = username;
     // console.log(io.sockets.adapter.rooms);
