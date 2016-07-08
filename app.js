@@ -15,6 +15,13 @@ var MongoClient = require('mongodb').MongoClient;
 // var Db = require('mongodb').Db;
 // var secrets = require('./secrets');
 var database;
+var defaultRooms = {
+    global: true,
+    roomOne: true,
+    roomTwo: true,
+    roomThree: true
+};
+
 var UI_SERVER = process.env.UI_SERVER;
 var db = MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
@@ -136,7 +143,7 @@ io.sockets.on('connection', function(socket){
                      }
                  });
              });
-             
+
     } else {
         socket.username = 'guest#' + Math.floor(Math.random() * 100000000);
         socket.loggedIn = false;
@@ -167,12 +174,13 @@ io.sockets.on('connection', function(socket){
     socket.on('subscribe', function(data) {
         socket.join(data.room);
         socket.room = data.room;
+        if (!defaultRooms[data.room]){
+            database.createCollection(data.room, { capped : true, size : 10000, max : 10 }, function(err, collection){
+               if (err) throw err;
 
-        database.createCollection(data.room, { capped : true, size : 10000, max : 10 }, function(err, collection){
-           if (err) throw err;
-
-            console.log("Created " + data.room);
-        });
+                console.log("Created " + data.room);
+            });
+        }
 
 
 
