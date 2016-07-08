@@ -27,12 +27,12 @@ var db = MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
   console.log("Connected to Database");
   database = db;
-  database.collection('users').update({},{$set : {"socket":'0'}},false,true);
-  database.createCollection('privateChats', { size : 10000000, max : 100000 }, function(err, collection){
-     if (err) throw err;
+  // database.collection('users').update({},{$set : {"socket":'0'}},false,true);
+  // database.createCollection('privateChats', { size : 10000000, max : 100000 }, function(err, collection){
+  //    if (err) throw err;
 
     //   console.log("Created privateChats");
-  });
+  // });
   });
 
 var development = process.env.NODE_ENV !== 'production';
@@ -119,12 +119,10 @@ io.sockets.on('connection', function(socket){
         socket.username = socket.request.user.name;
         socket.loggedIn = true;
         socket.facebookId = socket.request.user.id;
-        database.collection('users').findOne({facebookId: socket.request.user.id}, (err, document)=>{
-            database.collection('users').update(
-              { facebookId: socket.request.user.id },
-              { $set: {socket: socket.id} }
-            );
-        });
+        database.collection('users').update(
+          { facebookId: socket.request.user.id },
+          { $set: {socket: socket.id} }
+        );
 
         database.collection('privateChats').find(
              {users: {$in: [socket.request.user.id]}},
@@ -220,7 +218,6 @@ io.sockets.on('connection', function(socket){
         }
     });
     socket.on('send-pvt-message', function(data) {
-        var receiveSocket = io.sockets.connected[data.targetedSocket];
         database.collection('privateChats').find(
              { $and: [ {users: { $in: [data.userId] }}, {users: {$in: [socket.request.user.id]}} ] },
              (err, document)=>{
@@ -233,7 +230,18 @@ io.sockets.on('connection', function(socket){
                            { $push: { messages: {comment: data.message, user: {name: socket.username}} } }
                          );
                          socket.emit('receive-comment', {comment: data.message, user: {name: socket.username}});
-                         receiveSocket.emit('receive-comment', {comment: data.message, user: {name: socket.username}});
+
+                         database.collection('users').findOne(
+                             { facebookId: data.userId },
+                             { socket: 1, name: 1, facebookId: 1 },
+                           (err, document)=>{
+                               var receiveSocket = io.sockets.connected[document.socket];
+                               if (typeof receiveSocket !== "undefined"){
+                                   receiveSocket.emit('receive-comment', {comment: data.message, user: {name: socket.username}});
+                               }
+                           });
+
+
                      } else {
                          console.log('no records found; unknown error occured');
                      }
@@ -242,7 +250,7 @@ io.sockets.on('connection', function(socket){
     });
 
     socket.on('open-pvt-chat-window', function(data) {
-        var receiveSocket = io.sockets.connected[data.socket];
+        
         database.collection('privateChats').find(
              { $and: [ {users: { $in: [data.facebookId] }}, {users: {$in: [socket.request.user.id]}} ] },
              (err, data)=>{
@@ -259,7 +267,6 @@ io.sockets.on('connection', function(socket){
 
 
     socket.on('open-pvt-chat', function(data) {
-        var receiveSocket = io.sockets.connected[data.socket];
         database.collection('privateChats').find(
              { $and: [ {users: { $in: [data.id] }}, {users: {$in: [socket.request.user.id]}} ] },
              (err, data)=>{
@@ -269,7 +276,7 @@ io.sockets.on('connection', function(socket){
                          socket.emit('open-window', {messages: res[0].messages});
                      } else {
                          console.log('no records found; creating chat');
-                         database.collection('privateChats').insert({users: [receiveSocket.request.user.id, socket.request.user.id], messages: []});
+                         database.collection('privateChats').insert({users: [data.id, socket.request.user.id], messages: []});
                          socket.emit('open-window', {messages: []});
                      }
                  });
