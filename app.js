@@ -94,6 +94,10 @@ var allRooms = {};
 var numGuests = 0;
 io.sockets.on('connection', function(socket){
     // socket.emit('news', {hello: 'world'});
+    if (typeof database === 'undefined'){
+        return false;
+    }
+    
     function extractChatPartners(res, cb){
         var otherId;
         var users = [];
@@ -250,7 +254,7 @@ io.sockets.on('connection', function(socket){
     });
 
     socket.on('open-pvt-chat-window', function(data) {
-        
+
         database.collection('privateChats').find(
              { $and: [ {users: { $in: [data.facebookId] }}, {users: {$in: [socket.request.user.id]}} ] },
              (err, data)=>{
@@ -269,13 +273,12 @@ io.sockets.on('connection', function(socket){
     socket.on('open-pvt-chat', function(data) {
         database.collection('privateChats').find(
              { $and: [ {users: { $in: [data.id] }}, {users: {$in: [socket.request.user.id]}} ] },
-             (err, data)=>{
-                 data.toArray()
+             (err, documents)=>{
+                 documents.toArray()
                  .then((res)=>{
                      if (res.length > 0){
                          socket.emit('open-window', {messages: res[0].messages});
                      } else {
-                         console.log('no records found; creating chat');
                          database.collection('privateChats').insert({users: [data.id, socket.request.user.id], messages: []});
                          socket.emit('open-window', {messages: []});
                      }

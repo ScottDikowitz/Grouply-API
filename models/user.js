@@ -35,13 +35,13 @@ userSchema.statics.findOrCreate = function(data, cb) {
                 email: data.email,
                 token: data.token });
             newUser.save(
-                function (err) {
+                function (err, savedUser) {
                     if (err) {
                         console.log ('Error on save!');
                         cb(err);
                     } else {
                         console.log ('successfully created user!: ' + JSON.stringify(newUser));
-                        cb(null, {name: newUser.name, id: newUser.facebookId});
+                        cb(null, savedUser);
                     }
                 });
         }
