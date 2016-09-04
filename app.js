@@ -5,15 +5,12 @@ var server = require('http').createServer(app);
 var io = require('socket.io').listen(server);
 server.listen(app.get('port'));
 var auth = require('./config/auth.js');
-// var count = 0;
 var dbConfig = require('./db.js');
 var mongoose = require('mongoose');
 var User = require('./models/user.js');
 var passportSocketIo = require('passport.socketio');
 var cookieParser = require('cookie-parser');
 var MongoClient = require('mongodb').MongoClient;
-// var Db = require('mongodb').Db;
-// var secrets = require('./secrets');
 var database;
 var defaultRooms = {
     global: true,
@@ -23,20 +20,14 @@ var defaultRooms = {
 };
 
 var UI_SERVER = process.env.UI_SERVER;
-var db = MongoClient.connect(dbConfig.url, function(err, db) {
+var db = process.env.NODE_ENV !== 'test' ? MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
   console.log("Connected to Database");
   database = db;
-  // database.collection('users').update({},{$set : {"socket":'0'}},false,true);
-  // database.createCollection('privateChats', { size : 10000000, max : 100000 }, function(err, collection){
-  //    if (err) throw err;
-
-    //   console.log("Created privateChats");
-  // });
-  });
+  }) : null;
 
 var development = process.env.NODE_ENV !== 'production';
-mongoose.connect(dbConfig.url);
+if (process.env.NODE_ENV !== 'test') {mongoose.connect(dbConfig.url); }
 
 FacebookStrategy = require('passport-facebook').Strategy;
 
@@ -97,7 +88,7 @@ io.sockets.on('connection', function(socket){
     if (typeof database === 'undefined'){
         return false;
     }
-    
+
     function extractChatPartners(res, cb){
         var otherId;
         var users = [];
@@ -378,3 +369,5 @@ passport.use('facebook', new FacebookStrategy(auth.facebookAuth,
       });
     }
 ));
+
+module.exports = app;
