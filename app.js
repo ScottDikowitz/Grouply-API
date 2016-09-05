@@ -3,6 +3,7 @@ var app = express();
 app.set('port', process.env.PORT || 8000);
 var server = require('http').createServer(app);
 var io = require('socket.io').listen(server);
+// console.log(io);
 server.listen(app.get('port'));
 var auth = require('./config/auth.js');
 var dbConfig = require('./db.js');
@@ -20,14 +21,15 @@ var defaultRooms = {
 };
 
 var UI_SERVER = process.env.UI_SERVER;
-var db = process.env.NODE_ENV !== 'test' ? MongoClient.connect(dbConfig.url, function(err, db) {
+var test = process.env.NODE_ENV === 'test';
+var db = !test ? MongoClient.connect(dbConfig.url, function(err, db) {
   if (err) throw err;
   console.log("Connected to Database");
   database = db;
   }) : null;
 
 var development = process.env.NODE_ENV !== 'production';
-if (process.env.NODE_ENV !== 'test') {mongoose.connect(dbConfig.url); }
+if (!test) {mongoose.connect(dbConfig.url); }
 
 FacebookStrategy = require('passport-facebook').Strategy;
 
@@ -49,13 +51,16 @@ app.use(expressSession({
     saveUninitialized: false,
     resave: false
 }));
-io.use(passportSocketIo.authorize({
-  cookieParser: cookieParser,
-  secret:       'mySecretKey',
-  store:        RedisStoreInstance,
-  success:      onAuthorizeSuccess,
-  fail:         onAuthorizeFail,
-}));
+
+if (!test){
+    io.use(passportSocketIo.authorize({
+      cookieParser: cookieParser,
+      secret:       'mySecretKey',
+      store:        RedisStoreInstance,
+      success:      onAuthorizeSuccess,
+      fail:         onAuthorizeFail,
+    }));
+}
 
 function onAuthorizeSuccess(data, accept){
   // console.log('successful connection to socket.io');
@@ -84,11 +89,9 @@ var allRooms = {};
 // var users = {};
 var numGuests = 0;
 io.sockets.on('connection', function(socket){
-    // socket.emit('news', {hello: 'world'});
-    if (typeof database === 'undefined'){
+    if (!test && typeof database === 'undefined'){
         return false;
     }
-
     function extractChatPartners(res, cb){
         var otherId;
         var users = [];
@@ -110,7 +113,7 @@ io.sockets.on('connection', function(socket){
           });
     }
 
-    if (socket.request.user.logged_in){
+    if (socket.request.user && socket.request.user.logged_in){
         socket.username = socket.request.user.name;
         socket.loggedIn = true;
         socket.facebookId = socket.request.user.id;
@@ -165,9 +168,10 @@ io.sockets.on('connection', function(socket){
     // console.log(io.sockets.connected);
     socket.nickname = socket.request.user;
     socket.on('subscribe', function(data) {
+
         socket.join(data.room);
         socket.room = data.room;
-        if (!defaultRooms[data.room]){
+        if (!test && !defaultRooms[data.room]){
             database.createCollection(data.room, { capped : true, size : 10000, max : 10 }, function(err, collection){
                if (err) throw err;
 
@@ -182,13 +186,15 @@ io.sockets.on('connection', function(socket){
             var theUser = io.sockets.connected[client];
             users.push({username: theUser.username, client: client, loggedIn: theUser.loggedIn, id: theUser.facebookId});
         }
-        var collection = database.collection(socket.room);
-        collection.find((err, data)=>{
-            data.toArray().then((messages)=>{
-                socket.emit('receive-messages', messages);
+        if (!test){
+            var collection = database.collection(socket.room);
+            collection.find((err, data)=>{
+                data.toArray().then((messages)=>{
+                    socket.emit('receive-messages', messages);
 
+                });
             });
-        });
+        }
         io.sockets.in(socket.room).emit('receive-users', users);
         // io.sockets.in(socket.room).emit('receive-users', {users: users, comments: []});
         // if (socket.request.user.logged_in){
@@ -346,7 +352,6 @@ app.get('/auth/facebook/callback',
 );
 
 function isLoggedIn(req, res, next) {
-
     if (req.isAuthenticated())
         return next();
 
@@ -370,4 +375,4 @@ passport.use('facebook', new FacebookStrategy(auth.facebookAuth,
     }
 ));
 
-module.exports = app;
+module.exports = {app: app, io: io};
