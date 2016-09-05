@@ -6,24 +6,23 @@ process.env.NODE_ENV = 'test';
 
 var chai = require('chai');
 var chaiHttp = require('chai-http');
-var server = require('../app').app;
-var io = require('../app').io;
+var server = require('../app');
 var should = chai.should();
 var clientio = require("socket.io-client");
 chai.use(chaiHttp);
 
 describe('APP', () => {
     describe('GET /api/user', () => {
-          it('it should not return a user', (done) => {
+        it('it should not return a user', (done) => {
             chai.request(server)
                 .get('/api/user')
                 .end((err, res) => {
                     res.should.have.status(200);
                     res.body.should.be.a('object');
                     res.body.result.should.equal('not logged in.');
-                  done();
+                    done();
                 });
-          });
+        });
     });
 
     describe('Socket.io', () => {
@@ -34,17 +33,14 @@ describe('APP', () => {
               'force new connection': true
             };
             var cl = clientio.connect('http://localhost:8000', options);
-
-            cl.on('connect', ()=> {
+            cl.on('connect', () => {
                 cl.emit("subscribe", { room: 'global' });
             });
-
             cl.on('receive-users', (data) => {
                 data.should.be.a('array');
                 data.length.should.be.equal(1);
                 done();
-            })
+            });
         });
     });
-
 });
